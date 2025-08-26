@@ -34,42 +34,12 @@ func Execute(futures ...*Task) error {
 	errChan := make(chan error)
 
 	for _, future := range futures {
-
-		go func(future *Task) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					future.err = errors.New(fmt.Sprint(err))
-					errChan <- future.err
-				}
-			}()
-
-			s := future.s
-			r := future.r
-
-			if s != nil {
-				// supplier
-				result := future.resultChan
-				res, err := s.get()
-				result <- res
-				if err != nil {
-					future.err = err
-					errChan <- err
-					return
-				}
+		go func(future *Task, wg *sync.WaitGroup, errChan chan error) {
+			future.execute(wg)
+			if future.err != nil {
+				errChan <- future.err
 			}
-
-			if r != nil {
-				// runnable
-				if err := r.run(); err != nil {
-					future.err = err
-					errChan <- err
-					return
-				}
-			}
-
-		}(future)
-
+		}(future, &wg, errChan)
 	}
 
 	go func() {
@@ -99,39 +69,9 @@ func Run(futures ...*Task) {
 	doneChan := make(chan bool)
 
 	for _, future := range futures {
-
-		go func(future *Task) {
-			defer wg.Done()
-			defer func() {
-				if err := recover(); err != nil {
-					future.err = errors.New(fmt.Sprint(err))
-				}
-			}()
-
-			s := future.s
-			r := future.r
-
-			if s != nil {
-				// supplier
-				result := future.resultChan
-				res, err := s.get()
-				result <- res
-				if err != nil {
-					future.err = err
-					return
-				}
-			}
-
-			if r != nil {
-				// runnable
-				if err := r.run(); err != nil {
-					future.err = err
-					return
-				}
-			}
-
-		}(future)
-
+		go func(future *Task, wg *sync.WaitGroup) {
+			future.execute(wg)
+		}(future, &wg)
 	}
 
 	go func() {
@@ -194,6 +134,37 @@ func (task *Task) Get() any {
 // Err returns an error from Task, it will block until the task is done.
 func (task *Task) Err() error {
 	return task.err
+}
+
+func (task *Task) execute(wg *sync.WaitGroup) {
+	defer func() {
+		if err := recover(); err != nil {
+			task.err = errors.New(fmt.Sprint(err))
+		}
+		wg.Done()
+	}()
+
+	s := task.s
+	r := task.r
+
+	if s != nil {
+		// supplier
+		result := task.resultChan
+		res, err := s.get()
+		result <- res
+		if err != nil {
+			task.err = err
+			return
+		}
+	}
+
+	if r != nil {
+		// runnable
+		if err := r.run(); err != nil {
+			task.err = err
+			return
+		}
+	}
 }
 
 type supplier struct {

@@ -265,9 +265,19 @@ func TestExecute_panicRecover(t *testing.T) {
 	future := SupplyAsync(func() (int64, error) { return 2233, nil })
 	panicFuture := RunAsync(func() error { panic("panic simulation") })
 	time.Sleep(1 * time.Second)
+
 	t.Log(future.Get())
-	if err := panicFuture.Err(); err == nil {
+
+	err := panicFuture.Err()
+	if err == nil {
 		t.Fatal("expected an error")
+	}
+
+	if !future.IsDone() {
+		t.Fatal("expected future to be done")
+	}
+	if !panicFuture.IsDone() {
+		t.Fatal("expected panic future to be done")
 	}
 }
 

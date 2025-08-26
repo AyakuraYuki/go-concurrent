@@ -16,17 +16,6 @@ func RunAsync(f func() error) *CompletableFuture[any] {
 	return future
 }
 
-// Wait for all the *CompletableFuture[T] to complete execution.
-// Each element in the array must be declared with the same type.
-func Wait[T any](futures ...*CompletableFuture[T]) {
-	if len(futures) == 0 {
-		return
-	}
-	for i := range futures {
-		futures[i].Wait()
-	}
-}
-
 // SupplyAsync creates a CompletableFuture with supplier function,
 // then executes the supplier immediately in async.
 // After supplier done, the result will be cached into future.result.
@@ -37,6 +26,17 @@ func SupplyAsync[T any](f func() (T, error)) *CompletableFuture[T] {
 	}
 	go future.execute()
 	return future
+}
+
+// Wait for all the *CompletableFuture[T] to complete execution.
+// Each element in the array must be declared with the same type.
+func Wait[T any](futures ...*CompletableFuture[T]) {
+	if len(futures) == 0 {
+		return
+	}
+	for i := range futures {
+		futures[i].Wait()
+	}
 }
 
 // CompletableFuture defines a unit of future tasks and allows the running of a supplier/runnable function.
@@ -52,19 +52,19 @@ type CompletableFuture[T any] struct {
 }
 
 // Result returns both result and error from CompletableFuture, it will block until the task is done.
-func (future *CompletableFuture[T]) Result() (T, error) {
-	result := future.Get()
-	err := future.Err()
-	return result, err
+func (future *CompletableFuture[T]) Result() (t T, err error) {
+	t = future.Get()
+	err = future.Err()
+	return
 }
 
 // Get the result from CompletableFuture and ignore the error, it will block until the task is done.
 // Note that a runnable CompletableFuture has no result.
-func (future *CompletableFuture[T]) Get() T {
-	var empty T
+func (future *CompletableFuture[T]) Get() (t T) {
+	// var empty T
 
 	if future.s == nil {
-		return empty // only supplier will return result, nothing can be returned from a runnable
+		return t // only supplier will return result, nothing can be returned from a runnable
 	}
 
 	if future.result != nil {
@@ -74,12 +74,12 @@ func (future *CompletableFuture[T]) Get() T {
 	future.Wait() // wait for the task done
 
 	if len(future.resultChan) == 0 {
-		return empty
+		return t
 	}
 
 	result, ok := <-future.resultChan
 	if !ok {
-		return empty
+		return t
 	}
 	future.result = &result
 
@@ -109,11 +109,11 @@ func (future *CompletableFuture[T]) Wait() {
 }
 
 func (future *CompletableFuture[T]) execute() {
-	defer future.done.Store(true)
 	defer func() {
 		if err := recover(); err != nil {
 			future.err = errors.New(fmt.Sprint(err))
 		}
+		future.done.Store(true)
 	}()
 
 	if future == nil || (future.r == nil && future.s == nil) {
