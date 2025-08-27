@@ -11,49 +11,49 @@ import (
 )
 
 // case 1: run async
-func ExampleRunAsync() {
-	futureA := concurrent.RunAsync(func() error {
+func ExampleRun() {
+	futureA := concurrent.Run(func() error {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		fmt.Printf("in future a, generated a random number %d\n", rand.Intn(100))
 		return nil
 	})
 
-	futureB := concurrent.RunAsync(func() error {
+	futureB := concurrent.Run(func() error {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		fmt.Println("in future b, greeting developer")
 		return nil
 	})
 
-	futureC := concurrent.RunAsync(func() error {
+	futureC := concurrent.Run(func() error {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		fmt.Println("in future c, we raised an error")
 		return errors.New("hi guys")
 	})
 
-	// Feel free to wait anywhere until the CompletableFuture is completed.
+	// Feel free to wait anywhere until the Task is completed.
 	fmt.Println("do something...")
-	concurrent.Wait(futureA, futureC)
+	concurrent.WaitAll(futureA, futureC)
 	fmt.Println("after future A and C done, do something...")
 	futureB.Wait() // waiting for future B
 	fmt.Println("all futures done")
 
-	// Or wait for all CompletableFutures done
-	concurrent.Wait(futureA, futureB, futureC)
+	// Or wait for all Task done
+	concurrent.WaitAll(futureA, futureB, futureC)
 
-	// Handle errors from CompletableFuture
+	// Handle errors from Task
 	if err := futureC.Err(); err != nil {
 		log.Fatalf("error from future C: %v\n", err)
 	}
 }
 
 // case 2: supply async
-func ExampleSupplyAsync() {
-	futureA := concurrent.SupplyAsync(func() (string, error) {
+func ExampleGet() {
+	futureA := concurrent.Get(func() (string, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		return "bilibili", nil
 	})
 
-	futureB := concurrent.SupplyAsync(func() (int64, error) {
+	futureB := concurrent.Get(func() (int64, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		return 2233, nil
 	})
@@ -62,34 +62,26 @@ func ExampleSupplyAsync() {
 		Val string `json:"val"`
 	}
 
-	futureC := concurrent.SupplyAsync(func() (foo, error) {
+	futureC := concurrent.Get(func() (foo, error) {
 		return foo{Val: "66"}, errors.New("this is an error")
 	})
 
-	futureD := concurrent.SupplyAsync(func() (*foo, error) {
+	futureD := concurrent.Get(func() (*foo, error) {
 		return &foo{Val: "2233"}, nil
 	})
 
-	// // Be warned, CompletableFutures with different generic types are not allowed to wait together use [concurrent.Wait].
-	// //
-	// //	Compile failed: Cannot use 'futureB' (type *CompletableFuture[int64]) as the type *CompletableFuture[string]
-	// //	Compile failed: Cannot use 'futureC' (type *CompletableFuture[foo]) as the type *CompletableFuture[string]
-	// //	Compile failed: Cannot use 'futureD' (type *CompletableFuture[*foo]) as the type *CompletableFuture[string]
-	// //
-	// concurrent.Wait(futureA, futureB, futureC, futureD)
-
-	// Use [CompletableFuture.Get] to get result and ignore error
+	// Use [Task.Get] to get result and ignore error
 	title := futureA.Get()
 	fmt.Printf("title: %s\n", title)
 
-	// Use [CompletableFuture.Result] to get result and error
+	// Use [Task.Result] to get result and error
 	number, err := futureB.Result()
 	if err != nil {
 		log.Fatalf("error from futureB: %v\n", err)
 	}
 	fmt.Printf("number: %d\n", number)
 
-	// Use [CompletableFuture.Err] to handle error
+	// Use [Task.Err] to handle error
 	if err = futureC.Err(); err != nil {
 		log.Fatalf("error from futureC: %v\n", err)
 	}

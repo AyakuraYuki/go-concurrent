@@ -170,3 +170,10 @@ var globalMatrics TaskMatrics
 func MetricsStatus() TaskMatrics {
 	return globalMatrics
 }
+
+func ResetMetricsStatus() {
+	globalMatrics.Created = 0
+	globalMatrics.Done = 0
+	globalMatrics.Failed = 0
+	globalMatrics.Cancelled = 0
+}

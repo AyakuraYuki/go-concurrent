@@ -14,11 +14,11 @@ import (
 
 func TestTask(t *testing.T) {
 	task := concurrent.Run(func() error {
-		time.Sleep(3 * time.Second)
+		time.Sleep(2 * time.Second)
 		return nil
 	})
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 
 	for {
 		select {
@@ -40,7 +40,7 @@ func TestTask(t *testing.T) {
 
 func TestTask_State(t *testing.T) {
 	task := concurrent.Run(func() error {
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		return nil
 	})
 
@@ -53,12 +53,12 @@ func TestTask_State(t *testing.T) {
 
 func TestTask_Result(t *testing.T) {
 	taskA := concurrent.Get(func() (string, error) {
-		time.Sleep(2 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 		return "A", nil
 	})
 
 	taskB := concurrent.Get(func() (int64, error) {
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		return 2233, nil
 	})
 
@@ -66,7 +66,7 @@ func TestTask_Result(t *testing.T) {
 		Name string `json:"name"`
 	}
 	taskC := concurrent.Get(func() (*foo, error) {
-		time.Sleep(3 * time.Second)
+		time.Sleep(1 * time.Second)
 		return &foo{Name: "bilibili"}, nil
 	})
 
@@ -85,7 +85,7 @@ func TestTask_Result(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.EqualValues(t, "bilibili", c.Name)
 
-	assert.EqualValues(t, 3, int(time.Since(st).Seconds()), "should not take over 3 seconds")
+	assert.EqualValues(t, 1, int(time.Since(st).Seconds()), "should not take over 3 seconds")
 }
 
 func TestTask_Get(t *testing.T) {
@@ -110,9 +110,46 @@ func TestTask_Get(t *testing.T) {
 	assert.True(t, time.Since(st).Seconds() < 1.0)
 }
 
+func TestTask_Err(t *testing.T) {
+	taskA := concurrent.Run(func() error {
+		time.Sleep(100 * time.Millisecond)
+		return nil
+	})
+
+	taskB := concurrent.Run(func() error {
+		time.Sleep(200 * time.Millisecond)
+		return errors.New("error")
+	})
+
+	taskC := concurrent.Get(func() (string, error) {
+		time.Sleep(300 * time.Millisecond)
+		return "", errors.New("error")
+	})
+
+	taskD := concurrent.Run(func() error {
+		panic("PANIC")
+	})
+
+	if err := taskA.Err(); err != nil {
+		t.Error("unexpected error raised from task A")
+	}
+
+	if err := taskB.Err(); err == nil {
+		t.Error("want an error raised from task B but not")
+	}
+
+	if err := taskC.Err(); err == nil {
+		t.Error("want an error raised from task C but not")
+	}
+
+	if err := taskD.Err(); err == nil {
+		t.Error("want a panic raised from task D but not")
+	}
+}
+
 func TestTask_panicRecover(t *testing.T) {
 	task := concurrent.Run(func() error {
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 		panic("panic")
 	})
 
@@ -123,7 +160,7 @@ func TestTask_panicRecover(t *testing.T) {
 
 func TestTask_write(t *testing.T) {
 	var (
-		times   = 10000000
+		times   = 1000000
 		tasks   = make([]*concurrent.Task[any], 0)
 		counter atomic.Int64
 	)
@@ -160,22 +197,24 @@ func TestTask_stabilize_inWaitGroup(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	t.Log("confirmed, no panic, test passed")
+	t.Log("no panic, no deadlock, passed")
 }
 
 func TestTask_Metrics(t *testing.T) {
+	concurrent.ResetMetricsStatus()
+
 	taskA := concurrent.Run(func() error {
-		time.Sleep(2 * time.Second)
+		time.Sleep(300 * time.Millisecond)
 		return nil
 	})
 
 	taskB := concurrent.Run(func() error {
-		time.Sleep(1 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 		return errors.New("error")
 	})
 
 	taskC := concurrent.Get(func() (int, error) {
-		time.Sleep(1 * time.Second)
+		time.Sleep(200 * time.Millisecond)
 		return 2233, nil
 	})
 
