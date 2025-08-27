@@ -79,10 +79,7 @@ func Run(futures ...*Task) {
 		close(doneChan)
 	}()
 
-	select {
-	case <-doneChan:
-		return
-	}
+	<-doneChan
 }
 
 // Task defines a unit of future tasks and allow the running of supplier/runnable function.

@@ -68,10 +68,8 @@ func (future *CompletableFuture[T]) IsDone() bool {
 
 // Wait blocks the invoker until this CompletableFuture is done.
 func (future *CompletableFuture[T]) Wait() {
-	for {
-		if future.done.Load() {
-			break
-		}
+	for !future.done.Load() {
+		break
 	}
 }
 

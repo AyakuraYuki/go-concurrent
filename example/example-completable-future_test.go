@@ -11,7 +11,7 @@ import (
 )
 
 // case 1: run async
-func exampleRunAsync() {
+func ExampleRunAsync() {
 	futureA := concurrent.RunAsync(func() error {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		fmt.Printf("in future a, generated a random number %d\n", rand.Intn(100))
@@ -47,7 +47,7 @@ func exampleRunAsync() {
 }
 
 // case 2: supply async
-func exampleSupplyAsync() {
+func ExampleSupplyAsync() {
 	futureA := concurrent.SupplyAsync(func() (string, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		return "bilibili", nil
@@ -70,13 +70,13 @@ func exampleSupplyAsync() {
 		return &foo{Val: "2233"}, nil
 	})
 
-	//// Be warned, CompletableFutures with different generic types are not allowed to wait together use [concurrent.Wait].
-	////
-	////	Compile failed: Cannot use 'futureB' (type *CompletableFuture[int64]) as the type *CompletableFuture[string]
-	////	Compile failed: Cannot use 'futureC' (type *CompletableFuture[foo]) as the type *CompletableFuture[string]
-	////	Compile failed: Cannot use 'futureD' (type *CompletableFuture[*foo]) as the type *CompletableFuture[string]
-	////
-	//concurrent.Wait(futureA, futureB, futureC, futureD)
+	// // Be warned, CompletableFutures with different generic types are not allowed to wait together use [concurrent.Wait].
+	// //
+	// //	Compile failed: Cannot use 'futureB' (type *CompletableFuture[int64]) as the type *CompletableFuture[string]
+	// //	Compile failed: Cannot use 'futureC' (type *CompletableFuture[foo]) as the type *CompletableFuture[string]
+	// //	Compile failed: Cannot use 'futureD' (type *CompletableFuture[*foo]) as the type *CompletableFuture[string]
+	// //
+	// concurrent.Wait(futureA, futureB, futureC, futureD)
 
 	// Use [CompletableFuture.Get] to get result and ignore error
 	title := futureA.Get()

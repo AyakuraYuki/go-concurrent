@@ -98,10 +98,8 @@ func (t *Task[T]) Result() (result T, err error) {
 		done <- true
 	}()
 
-	select {
-	case <-done:
-		return t.result, t.err
-	}
+	<-done
+	return t.result, t.err
 }
 
 // Get the result from Task and ignore the error.

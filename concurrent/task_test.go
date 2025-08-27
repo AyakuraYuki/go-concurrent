@@ -146,8 +146,8 @@ func TestTask_stabilize_inWaitGroup(t *testing.T) {
 		wg            sync.WaitGroup
 	)
 	for i := 0; i < times; i++ {
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 
 			tasks := make([]*concurrent.Task[int], 0)

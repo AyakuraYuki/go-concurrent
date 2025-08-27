@@ -10,7 +10,7 @@ import (
 )
 
 // case 1: execute multiple tasks
-func executeMultipleTasks() {
+func ExecuteMultipleTasks() {
 	futureA := futuretask.PlanSupply(func() (any, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		return rand.Intn(100), nil
@@ -28,14 +28,14 @@ func executeMultipleTasks() {
 
 	// You can't get result from any CompletableFuture if [concurrent.Execute] returns an error.
 	if err := futuretask.Execute(futureA, futureB, futureC); err != nil {
-		//panic(err) // Usually you should return the error, or panic it, or write the error message to logger.
+		// panic(err) // Usually you should return the error, or panic it, or write the error message to logger.
 
 		fmt.Println("caught error:", err) // For this demo, I will print the error message.
 	}
 
 	// DO NOT do the following operations, the program will panic!!!
-	//resultA := futureA.Get().(int)
-	//resultB := futureB.Get().(string)
+	// resultA := futureA.Get().(int)
+	// resultB := futureB.Get().(string)
 
 	// But feel free to call [CompletableFuture.Err] to handle the error in CompletableFuture,
 	// it is safe.
@@ -45,7 +45,7 @@ func executeMultipleTasks() {
 }
 
 // case 2: run multiple tasks and handle errors manually
-func runMultipleTasks() {
+func Example_runMultipleTasks() {
 	futureA := futuretask.PlanSupply(func() (any, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
 		return rand.Intn(100), nil
