@@ -171,6 +171,7 @@ func MetricsStatus() TaskMatrics {
 	return globalMatrics
 }
 
+// ResetMetricsStatus can reset the metrics data
 func ResetMetricsStatus() {
 	globalMatrics.Created = 0
 	globalMatrics.Done = 0

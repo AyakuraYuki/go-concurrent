@@ -108,6 +108,18 @@ func TestTask_Get(t *testing.T) {
 	res3 := task.Get()
 	assert.EqualValues(t, "A", res3)
 	assert.True(t, time.Since(st).Seconds() < 1.0)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res := task.Get()
+			assert.EqualValues(t, "A", res)
+			t.Log(res, time.Now().UnixMilli())
+		}()
+	}
+	wg.Wait()
 }
 
 func TestTask_Err(t *testing.T) {
