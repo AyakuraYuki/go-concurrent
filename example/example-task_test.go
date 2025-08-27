@@ -10,7 +10,6 @@ import (
 	"github.com/AyakuraYuki/go-concurrent/concurrent"
 )
 
-// case 1: run async
 func ExampleRun() {
 	futureA := concurrent.Run(func() error {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
@@ -46,7 +45,6 @@ func ExampleRun() {
 	}
 }
 
-// case 2: supply async
 func ExampleGet() {
 	futureA := concurrent.Get(func() (string, error) {
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(100)))
@@ -91,4 +89,55 @@ func ExampleGet() {
 		log.Fatalf("error from futureD: %v\n", err)
 	}
 	fmt.Printf("ptrFoo: %#v\n", ptrFoo)
+}
+
+func RunMultipleTasks() {
+	// Create multiple tasks
+	tasks := make([]*concurrent.Task[int], 10)
+	for i := 0; i < 10; i++ {
+		index := i
+		tasks[i] = concurrent.Get(func() (int, error) {
+			time.Sleep(time.Duration(rand.Intn(100)) * time.Millisecond)
+			return index * 2, nil
+		})
+	}
+
+	// Wait for all tasks
+	concurrent.WaitAll(tasks...)
+
+	// Collect results
+	for i, task := range tasks {
+		result := task.Get()
+		fmt.Printf("Task %d result: %d\n", i, result)
+	}
+}
+
+func HandleErrors() {
+	task := concurrent.Get(func() (string, error) {
+		return "", errors.New("something went wrong")
+	})
+
+	result, err := task.Result()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println("Result:", result)
+}
+
+func MonitorTask() {
+	task := concurrent.Run(func() error {
+		time.Sleep(2 * time.Second)
+		return nil
+	})
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for !task.IsDone() {
+		<-ticker.C
+		fmt.Printf("work (ut: %s)\n", task.SpendTime())
+	}
+
+	fmt.Printf("task state: %v (ut: %v)\n", task.State(), task.SpendTime())
 }

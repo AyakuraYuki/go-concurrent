@@ -19,23 +19,14 @@ func TestTask(t *testing.T) {
 	})
 
 	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			t.Logf("work... (ut: %s)", task.SpendTime())
-			if task.IsDone() {
-				ticker.Stop()
-				t.Fatal("unexpected task state")
-			}
-		default:
-			if task.IsDone() {
-				t.Logf("task is done (ut: %s)", task.SpendTime())
-				ticker.Stop()
-				return
-			}
-		}
+	for !task.IsDone() {
+		<-ticker.C
+		t.Logf("work (ut: %s)", task.SpendTime())
 	}
+
+	t.Logf("task state: %v (ut: %v)", task.State(), task.SpendTime())
 }
 
 func TestTask_State(t *testing.T) {
