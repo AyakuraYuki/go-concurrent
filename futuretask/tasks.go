@@ -1,8 +1,7 @@
 package futuretask
 
 import (
-	"errors"
-	"sync"
+	"golang.org/x/sync/errgroup"
 )
 
 // PlanRun creates a future task with a runnable function.
@@ -26,38 +25,16 @@ func Execute(futures ...*Task) (err error) {
 		return nil
 	}
 
-	var (
-		wg sync.WaitGroup
-		mu sync.RWMutex
+	eg := new(errgroup.Group)
 
-		doneChan = make(chan bool)
-	)
-
-	for _, future := range futures {
-		wg.Add(1)
-
-		go func(future *Task, wg *sync.WaitGroup, mu *sync.RWMutex) {
-			future.execute(wg)
-			if future.err != nil {
-				mu.Lock()
-				err = errors.Join(err, future.err)
-				mu.Unlock()
-			}
-		}(future, &wg, &mu)
+	for i := range futures {
+		if futures[i] == nil {
+			continue
+		}
+		eg.Go(futures[i].execute)
 	}
 
-	go func() {
-		wg.Wait()
-
-		mu.Lock()
-		defer mu.Unlock()
-
-		close(doneChan)
-	}()
-
-	<-doneChan
-
-	return err
+	return eg.Wait()
 }
 
 // Run the given tasks, it will block until all the tasks are done.
@@ -67,24 +44,14 @@ func Run(futures ...*Task) {
 		return
 	}
 
-	var (
-		wg sync.WaitGroup
+	eg := new(errgroup.Group)
 
-		doneChan = make(chan bool)
-	)
-
-	for _, future := range futures {
-		wg.Add(1)
-
-		go func(future *Task, wg *sync.WaitGroup) {
-			future.execute(wg)
-		}(future, &wg)
+	for i := range futures {
+		if futures[i] == nil {
+			continue
+		}
+		eg.Go(futures[i].execute)
 	}
 
-	go func() {
-		wg.Wait()
-		close(doneChan)
-	}()
-
-	<-doneChan
+	_ = eg.Wait()
 }

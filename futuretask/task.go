@@ -20,13 +20,6 @@ type Task struct {
 	once sync.Once
 }
 
-// Result returns both result and error from Task, it will block until the task is done.
-func (task *Task) Result() (any, error) {
-	result := task.Get()
-	err := task.Err()
-	return result, err
-}
-
 // Get the result from Task and ignore the error, it will block until the task is done.
 // Note that a runnable Task has no result.
 func (task *Task) Get() (empty any) {
@@ -65,14 +58,21 @@ func (task *Task) Get() (empty any) {
 }
 
 // Err returns an error from Task, it will block until the task is done.
-func (task *Task) Err() error {
+func (task *Task) Err() (err error) {
 	task.mu.RLock()
 	defer task.mu.RUnlock()
 
 	return task.err
 }
 
-func (task *Task) execute(wg *sync.WaitGroup) {
+// Result returns both result and error from Task, it will block until the task is done.
+func (task *Task) Result() (result any, err error) {
+	result = task.Get()
+	err = task.Err()
+	return
+}
+
+func (task *Task) execute() error {
 	task.once.Do(func() {
 
 		defer func() {
@@ -82,7 +82,6 @@ func (task *Task) execute(wg *sync.WaitGroup) {
 			if task.resultChan != nil {
 				close(task.resultChan)
 			}
-			wg.Done()
 		}()
 
 		task.mu.Lock()
@@ -107,4 +106,6 @@ func (task *Task) execute(wg *sync.WaitGroup) {
 		}
 
 	})
+
+	return task.Err()
 }

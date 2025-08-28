@@ -221,38 +221,6 @@ func TestExecute_stabilize_write(t *testing.T) {
 	}
 }
 
-func TestExecute_panicRecover(t *testing.T) {
-	future := futuretask.PlanSupply(func() (any, error) {
-		return int64(2233), nil
-	})
-
-	panicFuture := futuretask.PlanRun(func() error {
-		panic("panic simulation")
-	})
-
-	err := futuretask.Execute(future, panicFuture)
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-}
-
-func TestRun_panicRecover(t *testing.T) {
-	future := futuretask.PlanSupply(func() (any, error) {
-		return int64(2233), nil
-	})
-
-	panicFuture := futuretask.PlanRun(func() error {
-		panic("panic simulation")
-	})
-
-	futuretask.Run(future, panicFuture)
-
-	err := panicFuture.Err()
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-}
-
 func TestRaceCondition_ChannelAccess(t *testing.T) {
 	const numReaders = 100
 	const expectedValue = "test-value-12345"
@@ -496,6 +464,38 @@ func TestRaceCondition_ChannelClosing(t *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func TestExecute_PanicRecovery(t *testing.T) {
+	future := futuretask.PlanSupply(func() (any, error) {
+		return int64(2233), nil
+	})
+
+	panicFuture := futuretask.PlanRun(func() error {
+		panic("panic simulation")
+	})
+
+	err := futuretask.Execute(future, panicFuture)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+}
+
+func TestRun_PanicRecovery(t *testing.T) {
+	future := futuretask.PlanSupply(func() (any, error) {
+		return int64(2233), nil
+	})
+
+	panicFuture := futuretask.PlanRun(func() error {
+		panic("panic simulation")
+	})
+
+	futuretask.Run(future, panicFuture)
+
+	err := panicFuture.Err()
+	if err == nil {
+		t.Fatal("expected an error")
+	}
 }
 
 func TestRaceCondition_PanicRecovery(t *testing.T) {
