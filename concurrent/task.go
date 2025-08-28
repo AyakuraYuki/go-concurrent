@@ -62,16 +62,17 @@ func (t *Task[T]) IsDone() bool {
 // SpendTime returns the time taken by the task from the start to the end of
 // execution.
 func (t *Task[T]) SpendTime() time.Duration {
-	if t.startTime.IsZero() {
+	switch t.State() {
+	case StatePending:
 		return 0
+	case StateRunning:
+		return time.Since(t.startTime)
+	case StateDone:
+	case StateFailed:
+	case StateCancelled:
+		return t.endTime.Sub(t.startTime)
 	}
-
-	endTime := t.endTime
-	if endTime.IsZero() {
-		endTime = time.Now()
-	}
-
-	return endTime.Sub(t.startTime)
+	return 0
 }
 
 // Result returns the result by waiting for the task to be done. If the task
