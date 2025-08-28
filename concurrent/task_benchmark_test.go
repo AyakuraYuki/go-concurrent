@@ -87,7 +87,7 @@ func BenchmarkRaceCondition_ConcurrentTaskCreation(b *testing.B) {
 
 	b.StopTimer()
 	metrics := concurrent.MetricsStatus()
-	b.Logf("Created: %d, Done: %d, Failed: %d", metrics.Created, metrics.Done, metrics.Failed)
+	b.Logf("created: %d, done: %d, failed: %d", metrics.Created(), metrics.Done(), metrics.Failed())
 }
 
 func BenchmarkRaceCondition_ConcurrentResultAccess(b *testing.B) {
@@ -142,7 +142,7 @@ func BenchmarkRaceCondition_MixedOperations(b *testing.B) {
 			case 3:
 				// verify metrics
 				metrics := concurrent.MetricsStatus()
-				_ = metrics.Created + metrics.Done + metrics.Failed
+				_ = metrics.Created() + metrics.Done() + metrics.Failed()
 			}
 		}
 	})

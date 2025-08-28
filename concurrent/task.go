@@ -140,7 +140,7 @@ func (t *Task[T]) execute() {
 			if err := recover(); err != nil {
 				t.err = errors.Join(t.err, errors.New(fmt.Sprint(err)))
 				t.state.Store(int32(StateFailed))
-				atomic.AddInt64(&metrics.Failed, 1) // by panic
+				atomic.AddInt64(&metrics.failed, 1) // by panic
 			}
 			t.endTime.Store(time.Now().UnixNano())
 			t.cond.L.Unlock()
@@ -161,21 +161,26 @@ func (t *Task[T]) execute() {
 		}
 		if t.err != nil {
 			t.state.Store(int32(StateFailed))
-			atomic.AddInt64(&metrics.Failed, 1)
+			atomic.AddInt64(&metrics.failed, 1)
 		} else {
 			t.state.Store(int32(StateDone))
-			atomic.AddInt64(&metrics.Done, 1)
+			atomic.AddInt64(&metrics.done, 1)
 		}
 
 	})
 }
 
 type TaskMetrics struct {
-	Created   int64
-	Done      int64
-	Failed    int64
-	Cancelled int64
+	created   int64
+	done      int64
+	failed    int64
+	cancelled int64
 }
+
+func (metrics TaskMetrics) Created() int64   { return metrics.created }
+func (metrics TaskMetrics) Done() int64      { return metrics.done }
+func (metrics TaskMetrics) Failed() int64    { return metrics.failed }
+func (metrics TaskMetrics) Cancelled() int64 { return metrics.cancelled }
 
 var metrics TaskMetrics
 
@@ -186,8 +191,8 @@ func MetricsStatus() TaskMetrics {
 
 // ResetMetricsStatus can reset the metrics data
 func ResetMetricsStatus() {
-	metrics.Created = 0
-	metrics.Done = 0
-	metrics.Failed = 0
-	metrics.Cancelled = 0
+	metrics.created = 0
+	metrics.done = 0
+	metrics.failed = 0
+	metrics.cancelled = 0
 }

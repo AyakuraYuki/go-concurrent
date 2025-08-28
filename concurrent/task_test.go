@@ -226,7 +226,7 @@ func TestTask_Metrics(t *testing.T) {
 	taskC.Wait()
 
 	metrics := concurrent.MetricsStatus()
-	assert.EqualValues(t, 3, metrics.Created)
-	assert.EqualValues(t, 2, metrics.Done)
-	assert.EqualValues(t, 1, metrics.Failed)
+	assert.EqualValues(t, 3, metrics.Created())
+	assert.EqualValues(t, 2, metrics.Done())
+	assert.EqualValues(t, 1, metrics.Failed())
 }

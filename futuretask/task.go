@@ -79,7 +79,7 @@ func (task *Task) execute() error {
 		defer func() {
 			if err := recover(); err != nil {
 				task.err = errors.Join(task.err, errors.New(fmt.Sprint(err)))
-				atomic.AddInt64(&metrics.Failed, 1)
+				atomic.AddInt64(&metrics.failed, 1)
 			}
 			if task.resultChan != nil {
 				close(task.resultChan)
@@ -96,9 +96,9 @@ func (task *Task) execute() error {
 
 			if err != nil {
 				task.err = err
-				atomic.AddInt64(&metrics.Failed, 1)
+				atomic.AddInt64(&metrics.failed, 1)
 			} else {
-				atomic.AddInt64(&metrics.Done, 1)
+				atomic.AddInt64(&metrics.done, 1)
 			}
 
 		} else if task.run != nil {
@@ -106,9 +106,9 @@ func (task *Task) execute() error {
 			err := task.run()
 			if err != nil {
 				task.err = err
-				atomic.AddInt64(&metrics.Failed, 1)
+				atomic.AddInt64(&metrics.failed, 1)
 			} else {
-				atomic.AddInt64(&metrics.Done, 1)
+				atomic.AddInt64(&metrics.done, 1)
 			}
 
 		}
@@ -119,10 +119,14 @@ func (task *Task) execute() error {
 }
 
 type TaskMetrics struct {
-	Created int64
-	Done    int64
-	Failed  int64
+	created int64
+	done    int64
+	failed  int64
 }
+
+func (metrics TaskMetrics) Created() int64 { return metrics.created }
+func (metrics TaskMetrics) Done() int64    { return metrics.done }
+func (metrics TaskMetrics) Failed() int64  { return metrics.failed }
 
 var metrics TaskMetrics
 
@@ -133,7 +137,7 @@ func MetricsStatus() TaskMetrics {
 
 // ResetMetricsStatus can reset the metrics data
 func ResetMetricsStatus() {
-	metrics.Created = 0
-	metrics.Done = 0
-	metrics.Failed = 0
+	metrics.created = 0
+	metrics.done = 0
+	metrics.failed = 0
 }
