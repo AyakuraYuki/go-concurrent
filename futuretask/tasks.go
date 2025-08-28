@@ -1,6 +1,9 @@
 package futuretask
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 // PlanRun creates a future task with a runnable function.
 func PlanRun(f func() error) *Task {
@@ -18,7 +21,7 @@ func PlanSupply(f func() (any, error)) *Task {
 }
 
 // Execute the given tasks, and return an error if one of the tasks results in an error.
-func Execute(futures ...*Task) error {
+func Execute(futures ...*Task) (err error) {
 	if len(futures) == 0 {
 		return nil
 	}
@@ -28,20 +31,19 @@ func Execute(futures ...*Task) error {
 		mu sync.RWMutex
 
 		doneChan = make(chan bool)
-		errChan  = make(chan error)
 	)
 
 	for _, future := range futures {
 		wg.Add(1)
 
-		go func(future *Task, wg *sync.WaitGroup, errChan chan error, mu *sync.RWMutex) {
+		go func(future *Task, wg *sync.WaitGroup, mu *sync.RWMutex) {
 			future.execute(wg)
 			if future.err != nil {
 				mu.Lock()
-				errChan <- future.err
+				err = errors.Join(err, future.err)
 				mu.Unlock()
 			}
-		}(future, &wg, errChan, &mu)
+		}(future, &wg, &mu)
 	}
 
 	go func() {
@@ -51,15 +53,11 @@ func Execute(futures ...*Task) error {
 		defer mu.Unlock()
 
 		close(doneChan)
-		close(errChan)
 	}()
 
-	select {
-	case err := <-errChan:
-		return err
-	case <-doneChan:
-		return nil
-	}
+	<-doneChan
+
+	return err
 }
 
 // Run the given tasks, it will block until all the tasks are done.

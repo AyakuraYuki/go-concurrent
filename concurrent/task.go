@@ -67,12 +67,11 @@ func (t *Task[T]) SpendTime() time.Duration {
 		return 0
 	case StateRunning:
 		return time.Since(t.startTime)
-	case StateDone:
-	case StateFailed:
-	case StateCancelled:
+	case StateDone, StateFailed, StateCancelled:
 		return t.endTime.Sub(t.startTime)
+	default:
+		return 0
 	}
-	return 0
 }
 
 // Result returns the result by waiting for the task to be done. If the task

@@ -31,36 +31,44 @@ func (task *Task) Result() (any, error) {
 // Note that a runnable Task has no result.
 func (task *Task) Get() (empty any) {
 	if task.get == nil {
-		return empty // only supplier will return result, nothing can be returned from a runnable
+		// only the [task.get] can get result, there is nothing from [task.run]
+		return empty
 	}
 
 	task.mu.RLock()
-
 	if task.result != nil {
+		// result has been cached to task.result
 		defer task.mu.RUnlock()
-		return task.result // result has been cached to task.result
+		return task.result
 	}
-
-	if len(task.resultChan) == 0 {
-		defer task.mu.RUnlock()
-		return empty
-	}
-
 	task.mu.RUnlock()
+
 	task.mu.Lock()
 	defer task.mu.Unlock()
 
-	result, ok := <-task.resultChan
-	if !ok {
-		return empty
+	// double-check after acquiring write lock
+	if task.result != nil {
+		return task.result
 	}
 
-	task.result = result
-	return task.result
+	select {
+	case result, ok := <-task.resultChan:
+		if !ok {
+			return empty
+		}
+		task.result = result
+		return task.result
+
+	default:
+		return empty
+	}
 }
 
 // Err returns an error from Task, it will block until the task is done.
 func (task *Task) Err() error {
+	task.mu.RLock()
+	defer task.mu.RUnlock()
+
 	return task.err
 }
 
@@ -77,21 +85,21 @@ func (task *Task) execute(wg *sync.WaitGroup) {
 			wg.Done()
 		}()
 
-		get := task.get
-		run := task.run
+		task.mu.Lock()
+		defer task.mu.Unlock()
 
-		if get != nil {
+		if task.get != nil {
 
-			res, err := get()
+			res, err := task.get()
 			task.resultChan <- res
 
 			if err != nil {
 				task.err = err
 			}
 
-		} else if run != nil {
+		} else if task.run != nil {
 
-			err := run()
+			err := task.run()
 			if err != nil {
 				task.err = err
 			}
