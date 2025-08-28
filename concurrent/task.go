@@ -28,14 +28,13 @@ type Task[T any] struct {
 	result T     // result is the returned object from get
 	err    error // err is the error raised from get or run
 
-	state atomic.Int32 // state stores the task State
+	state     atomic.Int32 // state stores the task State
+	startTime atomic.Int64
+	endTime   atomic.Int64
 
 	mu   sync.RWMutex
 	cond *sync.Cond
 	once sync.Once
-
-	startTime time.Time
-	endTime   time.Time
 }
 
 // State resulting the current task state.
@@ -66,9 +65,23 @@ func (t *Task[T]) SpendTime() time.Duration {
 	case StatePending:
 		return 0
 	case StateRunning:
-		return time.Since(t.startTime)
+		startNano := t.startTime.Load()
+		if startNano == 0 {
+			return 0
+		}
+		startTime := time.Unix(0, startNano)
+		return time.Since(startTime)
+
 	case StateDone, StateFailed, StateCancelled:
-		return t.endTime.Sub(t.startTime)
+		startNano := t.startTime.Load()
+		endNano := t.endTime.Load()
+		if startNano == 0 || endNano == 0 {
+			return 0
+		}
+		startTime := time.Unix(0, startNano)
+		endTime := time.Unix(0, endNano)
+		return endTime.Sub(startTime)
+
 	default:
 		return 0
 	}
@@ -128,18 +141,19 @@ func (t *Task[T]) execute() {
 				t.err = errors.Join(t.err, errors.New(fmt.Sprint(err)))
 				t.state.Store(int32(StateFailed))
 				atomic.AddInt64(&metrics.Failed, 1) // by panic
-				t.cond.L.Unlock()
 			}
-			t.endTime = time.Now()
+			t.endTime.Store(time.Now().UnixNano())
+			t.cond.L.Unlock()
 			t.cond.Broadcast()
 		}()
 
 		t.cond.L.Lock()
-		t.startTime = time.Now()
+		t.startTime.Store(time.Now().UnixNano())
 		t.state.Store(int32(StateRunning))
 		t.cond.L.Unlock()
 
 		t.cond.L.Lock()
+
 		if t.get != nil {
 			t.result, t.err = t.get()
 		} else if t.run != nil {
@@ -152,7 +166,6 @@ func (t *Task[T]) execute() {
 			t.state.Store(int32(StateDone))
 			atomic.AddInt64(&metrics.Done, 1)
 		}
-		t.cond.L.Unlock()
 
 	})
 }

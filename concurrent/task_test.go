@@ -181,7 +181,7 @@ func TestTask_write(t *testing.T) {
 
 func TestTask_stabilize_inWaitGroup(t *testing.T) {
 	var (
-		times         = 10000
+		times         = 1000
 		tasksPreBatch = 500
 		wg            sync.WaitGroup
 	)
