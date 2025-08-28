@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/AyakuraYuki/go-concurrent/concurrent"
 )
@@ -69,4 +70,80 @@ func BenchmarkGet(b *testing.B) {
 		}
 		wg.Wait()
 	}
+}
+
+func BenchmarkRaceCondition_ConcurrentTaskCreation(b *testing.B) {
+	concurrent.ResetMetricsStatus()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			task := concurrent.Get(func() (int, error) {
+				return rand.Int(), nil
+			})
+			task.Get()
+		}
+	})
+
+	b.StopTimer()
+	metrics := concurrent.MetricsStatus()
+	b.Logf("Created: %d, Done: %d, Failed: %d", metrics.Created, metrics.Done, metrics.Failed)
+}
+
+func BenchmarkRaceCondition_ConcurrentResultAccess(b *testing.B) {
+	task := concurrent.Get(func() (string, error) {
+		time.Sleep(100 * time.Millisecond)
+		return "benchmark-result", nil
+	})
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			result := task.Get()
+			if result != "benchmark-result" {
+				b.Errorf("Unexpected result: %v", result)
+			}
+		}
+	})
+}
+
+func BenchmarkRaceCondition_MixedOperations(b *testing.B) {
+	concurrent.ResetMetricsStatus()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			switch rand.Intn(4) {
+			case 0:
+				// fast task
+				task := concurrent.Get(func() (int, error) {
+					return rand.Int(), nil
+				})
+				task.Get()
+
+			case 1:
+				// slow task
+				task := concurrent.Run(func() error {
+					time.Sleep(time.Microsecond)
+					return nil
+				})
+				task.Wait()
+
+			case 2:
+				// a task probably to fail
+				task := concurrent.Get(func() (string, error) {
+					if rand.Float32() < 0.1 {
+						return "", errors.New("random error")
+					}
+					return "success", nil
+				})
+				_, _ = task.Result()
+
+			case 3:
+				// verify metrics
+				metrics := concurrent.MetricsStatus()
+				_ = metrics.Created + metrics.Done + metrics.Failed
+			}
+		}
+	})
 }
