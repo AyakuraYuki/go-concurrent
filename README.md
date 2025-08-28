@@ -120,8 +120,15 @@ func main() {
 #### Utility Functions
 
 - `concurrent.WaitAll[T](tasks ...*Task[T])` - Wait for multiple tasks to complete
-- `concurrent.MetricsStatus()` - Get global task metrics
+- `concurrent.MetricsStatus() concurrent.TaskMetrics` - Get global task metrics
 - `concurrent.ResetMetricsStatus()` - Reset metrics counters
+
+#### Metrics
+
+- `metrics.Created() int64` - Returns the number of created tasks.
+- `metrics.Done() int64` - Returns the number of finished tasks.
+- `metrics.Failed() int64` - Returns the number of failed tasks.
+- `metrics.Cancelled() int64` - Returns the number of tasks which has been cancelled or exceeded deadline.
 
 #### Task States
 
@@ -148,6 +155,17 @@ func main() {
 - `task.Result() (any, error)` - Get result and error
 - `task.Get() any` - Get result only
 - `task.Err() error` - Get error only
+
+#### Utility Functions
+
+- `futuretask.MetricsStatus() futuretask.TaskMetrics` - Get global task metrics
+- `futuretask.ResetMetricsStatus()` - Reset metrics counters
+
+#### Metrics
+
+- `metrics.Created() int64` - Returns the number of created tasks.
+- `metrics.Done() int64` - Returns the number of finished tasks.
+- `metrics.Failed() int64` - Returns the number of failed tasks.
 
 ## Examples
 
