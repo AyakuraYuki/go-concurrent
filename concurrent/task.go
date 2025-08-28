@@ -29,8 +29,8 @@ type Task[T any] struct {
 	err    error // err is the error raised from get or run
 
 	state     atomic.Int32 // state stores the task State
-	startTime atomic.Int64
-	endTime   atomic.Int64
+	startTime atomic.Int64 // startTime stores the nanoseconds time before running
+	endTime   atomic.Int64 // endTime stores the nanoseconds time after running
 
 	mu   sync.RWMutex
 	cond *sync.Cond
