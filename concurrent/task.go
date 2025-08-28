@@ -127,7 +127,7 @@ func (t *Task[T]) execute() {
 			if err := recover(); err != nil {
 				t.err = errors.Join(t.err, errors.New(fmt.Sprint(err)))
 				t.state.Store(int32(StateFailed))
-				atomic.AddInt64(&globalMatrics.Failed, 1) // by panic
+				atomic.AddInt64(&metrics.Failed, 1) // by panic
 				t.cond.L.Unlock()
 			}
 			t.endTime = time.Now()
@@ -147,34 +147,34 @@ func (t *Task[T]) execute() {
 		}
 		if t.err != nil {
 			t.state.Store(int32(StateFailed))
-			atomic.AddInt64(&globalMatrics.Failed, 1)
+			atomic.AddInt64(&metrics.Failed, 1)
 		} else {
 			t.state.Store(int32(StateDone))
-			atomic.AddInt64(&globalMatrics.Done, 1)
+			atomic.AddInt64(&metrics.Done, 1)
 		}
 		t.cond.L.Unlock()
 
 	})
 }
 
-type TaskMatrics struct {
+type TaskMetrics struct {
 	Created   int64
 	Done      int64
 	Failed    int64
 	Cancelled int64
 }
 
-var globalMatrics TaskMatrics
+var metrics TaskMetrics
 
 // MetricsStatus returns the metrics status
-func MetricsStatus() TaskMatrics {
-	return globalMatrics
+func MetricsStatus() TaskMetrics {
+	return metrics
 }
 
 // ResetMetricsStatus can reset the metrics data
 func ResetMetricsStatus() {
-	globalMatrics.Created = 0
-	globalMatrics.Done = 0
-	globalMatrics.Failed = 0
-	globalMatrics.Cancelled = 0
+	metrics.Created = 0
+	metrics.Done = 0
+	metrics.Failed = 0
+	metrics.Cancelled = 0
 }

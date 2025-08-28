@@ -1,6 +1,8 @@
 package futuretask
 
 import (
+	"sync/atomic"
+
 	"golang.org/x/sync/errgroup"
 )
 
@@ -32,6 +34,7 @@ func Execute(futures ...*Task) (err error) {
 			continue
 		}
 		eg.Go(futures[i].execute)
+		atomic.AddInt64(&metrics.Created, 1)
 	}
 
 	return eg.Wait()
@@ -51,6 +54,7 @@ func Run(futures ...*Task) {
 			continue
 		}
 		eg.Go(futures[i].execute)
+		atomic.AddInt64(&metrics.Created, 1)
 	}
 
 	_ = eg.Wait()

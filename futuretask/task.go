@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
 // Task defines a unit of future tasks and allow the running of supplier/runnable function.
@@ -78,6 +79,7 @@ func (task *Task) execute() error {
 		defer func() {
 			if err := recover(); err != nil {
 				task.err = errors.Join(task.err, errors.New(fmt.Sprint(err)))
+				atomic.AddInt64(&metrics.Failed, 1)
 			}
 			if task.resultChan != nil {
 				close(task.resultChan)
@@ -94,6 +96,9 @@ func (task *Task) execute() error {
 
 			if err != nil {
 				task.err = err
+				atomic.AddInt64(&metrics.Failed, 1)
+			} else {
+				atomic.AddInt64(&metrics.Done, 1)
 			}
 
 		} else if task.run != nil {
@@ -101,6 +106,9 @@ func (task *Task) execute() error {
 			err := task.run()
 			if err != nil {
 				task.err = err
+				atomic.AddInt64(&metrics.Failed, 1)
+			} else {
+				atomic.AddInt64(&metrics.Done, 1)
 			}
 
 		}
@@ -108,4 +116,24 @@ func (task *Task) execute() error {
 	})
 
 	return task.Err()
+}
+
+type TaskMetrics struct {
+	Created int64
+	Done    int64
+	Failed  int64
+}
+
+var metrics TaskMetrics
+
+// MetricsStatus returns the metrics status
+func MetricsStatus() TaskMetrics {
+	return metrics
+}
+
+// ResetMetricsStatus can reset the metrics data
+func ResetMetricsStatus() {
+	metrics.Created = 0
+	metrics.Done = 0
+	metrics.Failed = 0
 }

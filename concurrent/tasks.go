@@ -14,7 +14,7 @@ func Run(run func() error) *Task[any] {
 	task.state.Store(int32(StatePending))
 	task.cond = sync.NewCond(&task.mu)
 
-	atomic.AddInt64(&globalMatrics.Created, 1)
+	atomic.AddInt64(&metrics.Created, 1)
 
 	go task.execute()
 
@@ -31,7 +31,7 @@ func Get[T any](get func() (T, error)) *Task[T] {
 	task.state.Store(int32(StatePending))
 	task.cond = sync.NewCond(&task.mu)
 
-	atomic.AddInt64(&globalMatrics.Created, 1)
+	atomic.AddInt64(&metrics.Created, 1)
 
 	go task.execute()
 
